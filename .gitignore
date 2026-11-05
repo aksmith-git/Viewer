@@ -2,3 +2,5 @@ build/
 *.xcodeproj/xcuserdata/
 .superpowers/
 .DS_Store
+Viewer.xcodeproj/
+Viewer/Info.plist

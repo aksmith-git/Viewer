@@ -1,0 +1,46 @@
+name: Viewer
+options:
+  bundleIdPrefix: com.adriansmith
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  ZIPFoundation:
+    url: https://github.com/weichsel/ZIPFoundation
+    from: 0.9.19
+targets:
+  Viewer:
+    type: application
+    platform: iOS
+    sources: [Viewer]
+    dependencies:
+      - package: ZIPFoundation
+    info:
+      path: Viewer/Info.plist
+      properties:
+        CFBundleDisplayName: Viewer
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight, UIInterfaceOrientationPortraitUpsideDown]
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.adriansmith.viewer
+      DEVELOPMENT_TEAM: 77STY5BM38
+      TARGETED_DEVICE_FAMILY: "1,2"
+      SWIFT_VERSION: "5.0"
+      CODE_SIGN_STYLE: Automatic
+  ViewerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [ViewerTests]
+    dependencies:
+      - target: Viewer
+    settings:
+      GENERATE_INFOPLIST_FILE: YES
+      DEVELOPMENT_TEAM: 77STY5BM38
+schemes:
+  Viewer:
+    build:
+      targets: {Viewer: all, ViewerTests: [test]}
+    test:
+      targets: [ViewerTests]
