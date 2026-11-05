@@ -40,7 +40,12 @@ targets:
   ViewerTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [ViewerTests]
+    sources:
+      - path: ViewerTests
+        excludes: [Fixtures]
+      - path: ViewerTests/Fixtures
+        type: folder
+        buildPhase: resources
     dependencies:
       - target: Viewer
     settings:

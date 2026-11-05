@@ -6,6 +6,8 @@ import Foundation
 final class OpenController: ObservableObject {
     @Published var opened: URL?
     @Published var children: [URL] = []
+    /// The folder pages are allowed to load files from: the opened folder or the unpacked zip.
+    private(set) var siteRoot: URL?
     private var scoped: URL?
     private let recents: RecentsStore
 
@@ -18,7 +20,20 @@ final class OpenController: ObservableObject {
         if target.startAccessingSecurityScopedResource() { scoped = target }
         recents.add(target)
         children = []
+        siteRoot = nil
         opened = target
+    }
+
+    func noteSiteRoot(_ url: URL) {
+        if siteRoot == nil || !url.standardizedFileURL.path.hasPrefix(siteRoot!.standardizedFileURL.path + "/") {
+            siteRoot = url
+        }
+    }
+
+    /// Where an HTML file may read from: the site root when the file is inside it, else its own folder.
+    func readRoot(for file: URL) -> URL {
+        if let root = siteRoot, file.standardizedFileURL.path.hasPrefix(root.standardizedFileURL.path + "/") { return root }
+        return file.deletingLastPathComponent()
     }
 
     func close() {
@@ -26,6 +41,7 @@ final class OpenController: ObservableObject {
         scoped = nil
         opened = nil
         children = []
+        siteRoot = nil
     }
 
     /// Files copied to us by "Open in…" land in Documents/Inbox, which iOS may clear. Move them to
