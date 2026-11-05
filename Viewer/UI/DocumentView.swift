@@ -11,6 +11,10 @@ struct DocumentView: View {
             .navigationBarTitleDisplayMode(.inline)
     }
 
+    static func size(of url: URL) -> Int {
+        (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+    }
+
     @ViewBuilder private var content: some View {
         switch FileKind.classify(url) {
         case .folder:
@@ -26,6 +30,14 @@ struct DocumentView: View {
             CodeViewer(url: url, language: language).id(url)
         case .text:
             CodeViewer(url: url, language: nil).id(url)
+        case .json:
+            if Self.size(of: url) > JSONTreeView.treeLimit {
+                CodeViewer(url: url, language: "json").id(url)
+            } else {
+                JSONTreeView(url: url).id(url)
+            }
+        case .csv(let separator):
+            CSVGridView(url: url, separator: separator).id(url)
         default:
             PlaceholderView(url: url)
         }

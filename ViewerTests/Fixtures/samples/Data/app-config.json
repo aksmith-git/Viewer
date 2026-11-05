@@ -1,0 +1,17 @@
+{
+  "name": "Aurora",
+  "version": "2.4.0",
+  "released": true,
+  "rating": 4.80,
+  "maintainer": null,
+  "platforms": ["iOS", "iPadOS", "macOS", "visionOS"],
+  "features": {
+    "offline": true,
+    "themes": ["Light", "Dark", "Midnight"],
+    "limits": { "maxFileSizeMB": 512, "recentItems": 50 }
+  },
+  "contributors": [
+    { "name": "Ada", "commits": 1203 },
+    { "name": "Grace", "commits": 877 }
+  ]
+}
