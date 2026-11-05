@@ -9,6 +9,7 @@ struct HomeView: View {
     @State private var search = ""
     @State private var missing: RecentItem?
     @State private var showingAbout = false
+    @Environment(\.scenePhase) private var scenePhase
     var selection: Binding<String?>? = nil      // iPad sidebar selection (item path)
 
     private var filtered: [RecentItem] {
@@ -46,6 +47,8 @@ struct HomeView: View {
         }
         .sheet(isPresented: $showingAbout) { AboutView() }
         .task { if UserDefaults.standard.bool(forKey: "showAbout") { showingAbout = true } }   // screenshots
+        .task(id: recents.items.map(\.id)) { await recents.refreshMissing() }
+        .onChange(of: scenePhase) { if scenePhase == .active { Task { await recents.refreshMissing() } } }
     }
 
     private var list: some View {
@@ -66,7 +69,7 @@ struct HomeView: View {
 
     private func row(_ item: RecentItem) -> some View {
         let url = URL(fileURLWithPath: item.path)
-        let isMissing = recents.isMissing(item)
+        let isMissing = recents.missing.contains(item.id)
         return Button {
             if let resolved = recents.resolve(item) { opener.open(resolved) } else { missing = item }
         } label: {

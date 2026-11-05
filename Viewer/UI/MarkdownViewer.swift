@@ -54,7 +54,7 @@ struct MarkdownViewer: View {
             }
         }
         let text = (try? TextLoader.load(url, limit: CodeViewer.textLimit).text) ?? ""
-        web.load(html: "<!doctype html><html><head><meta charset=utf-8><meta name=viewport content='width=device-width, initial-scale=1'></head><body><article id=md></article></body></html>",
+        web.load(html: "<!doctype html><html><head><meta charset=utf-8>\(StaticWeb.csp)<meta name=viewport content='width=device-width, initial-scale=1'></head><body><article id=md></article></body></html>",
                  baseURL: SiteURL.url(for: url, root: root))
         web.run("viewerSetSize(\(size)); viewerRenderMarkdown(\(StaticWeb.jsonString(text)))")
     }

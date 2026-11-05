@@ -143,13 +143,12 @@ extension WebModel: WKNavigationDelegate {
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard let url = action.request.url else { return .cancel }
         let mainFrame = action.targetFrame?.isMainFrame ?? true
-        switch NavigationPolicy.decide(url: url, root: root, isMainFrame: mainFrame) {
+        switch NavigationPolicy.decide(url: url, root: root, isMainFrame: mainFrame,
+                                       userTapped: action.navigationType == .linkActivated) {
         case .allow: return .allow
         case .cancel: return .cancel
         case .openExternally:
-            if action.navigationType == .linkActivated || action.navigationType == .other {
-                await UIApplication.shared.open(url)
-            }
+            await UIApplication.shared.open(url)
             return .cancel
         }
     }
@@ -169,7 +168,8 @@ extension WebModel: WKUIDelegate {
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if let url = action.request.url {
-            switch NavigationPolicy.decide(url: url, root: root, isMainFrame: true) {
+            switch NavigationPolicy.decide(url: url, root: root, isMainFrame: true,
+                                           userTapped: action.navigationType == .linkActivated) {
             case .allow: webView.load(action.request)
             case .openExternally: UIApplication.shared.open(url)
             case .cancel: break

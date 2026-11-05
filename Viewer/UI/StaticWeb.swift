@@ -51,13 +51,26 @@ final class StaticWeb: NSObject, ObservableObject, WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
-        if action.navigationType == .linkActivated, let url = action.request.url {
+        let mainFrame = action.targetFrame?.isMainFrame ?? true
+        let link = action.navigationType == .linkActivated
+        if link, let url = action.request.url {
             if url.fragment != nil, url.absoluteString.hasPrefix((webView.url?.absoluteString ?? "") + "#") { return .allow }
             onLink?(url)
             return .cancel
         }
-        return .allow
+        return Self.allowsNavigation(isMainFrame: mainFrame, linkActivated: link, loaded: loaded) ? .allow : .cancel
     }
+
+    /// Rendered content loads once; after that the page can't navigate itself (links go to the app).
+    nonisolated static func allowsNavigation(isMainFrame: Bool, linkActivated: Bool, loaded: Bool) -> Bool {
+        guard isMainFrame else { return true }
+        return !linkActivated && !loaded
+    }
+
+    /// Our templates' own content is passive: page scripts and inline handlers are blocked
+    /// (injected user scripts and evaluateJavaScript aren't affected by CSP).
+    static let csp = "<meta http-equiv=\"Content-Security-Policy\" content=\"script-src 'none'; object-src 'none'; base-uri 'none'\">"
+
 
     // MARK: helpers
 

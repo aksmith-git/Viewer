@@ -70,6 +70,15 @@ final class RecentsStoreTests: XCTestCase {
         XCTAssertEqual(again.resolve(again.items[0])?.lastPathComponent, "a.txt")
     }
 
+    func testRefreshMissingPublishesSet() async throws {
+        let store = RecentsStore(fileURL: storeFile)
+        let a = try make("here.txt"), b = try make("gone2.txt")
+        store.add(a); store.add(b)
+        try FileManager.default.removeItem(at: b)
+        await store.refreshMissing()
+        XCTAssertEqual(store.missing, [store.items.first { $0.name == "gone2.txt" }!.id])
+    }
+
     func testMissingFileFlagged() throws {
         let store = RecentsStore(fileURL: storeFile)
         let a = try make("gone.txt")

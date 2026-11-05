@@ -28,6 +28,19 @@ final class NavigationPolicyTests: XCTestCase {
         XCTAssertEqual(NavigationPolicy.decide(url: URL(string: "https://apple.com")!, root: root, isMainFrame: true), .openExternally)
     }
 
+    func testNoExternalWithoutTap() {
+        // JS redirects, meta refresh and window.open must not throw the user into Safari
+        XCTAssertEqual(NavigationPolicy.decide(url: URL(string: "https://apple.com")!, root: root, isMainFrame: true, userTapped: false), .cancel)
+        XCTAssertEqual(NavigationPolicy.decide(url: URL(string: "tel:123")!, root: root, isMainFrame: false, userTapped: true), .cancel)
+    }
+
+    func testStaticPagesOnlyLoadOnce() {
+        XCTAssertTrue(StaticWeb.allowsNavigation(isMainFrame: true, linkActivated: false, loaded: false))
+        XCTAssertFalse(StaticWeb.allowsNavigation(isMainFrame: true, linkActivated: false, loaded: true))   // location = ...
+        XCTAssertFalse(StaticWeb.allowsNavigation(isMainFrame: true, linkActivated: true, loaded: true))    // links go to the app
+        XCTAssertTrue(StaticWeb.allowsNavigation(isMainFrame: false, linkActivated: false, loaded: true))   // iframes/images
+    }
+
     func testHTTPSubresourceAllowed() {
         XCTAssertEqual(NavigationPolicy.decide(url: URL(string: "https://www.youtube.com/embed/x")!, root: root, isMainFrame: false), .allow)
     }

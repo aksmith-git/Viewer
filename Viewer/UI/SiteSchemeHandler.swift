@@ -6,6 +6,10 @@ import WebKit
 final class SiteSchemeHandler: NSObject, WKURLSchemeHandler {
     private let root: URL
     private var active = Set<ObjectIdentifier>()     // main thread only
+    private var stopped = Set<ObjectIdentifier>()    // read from the file queue: guarded by lock
+    private let lock = NSLock()
+    /// Ranged responses (media seeking) are capped so a huge video isn't read all at once.
+    static let rangeCap = 8 << 20
     private let queue = DispatchQueue(label: "viewer.site", qos: .userInitiated, attributes: .concurrent)
     /// Called (main thread) when a request inside the root fails to read — used for the
     /// "missing files" hint.
@@ -31,21 +35,20 @@ final class SiteSchemeHandler: NSObject, WKURLSchemeHandler {
             }
             defer { try? handle.close() }
             var start = 0, end = size - 1, status = 200
-            if let range, let r = Self.parse(range: range, size: size) { (start, end, status) = (r.0, r.1, 206) }
+            if let r = Self.responseRange(header: range, size: size, cap: Self.rangeCap) { (start, end, status) = (r.start, r.end, 206) }
             let length = max(0, end - start + 1)
             var headers = [
                 "Content-Type": SiteURL.mimeType(for: file),
                 "Content-Length": "\(length)",
                 "Accept-Ranges": "bytes",
                 "Cache-Control": "no-cache",
-                "Access-Control-Allow-Origin": "*",
             ]
             if status == 206 { headers["Content-Range"] = "bytes \(start)-\(end)/\(size)" }
             let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)!
             DispatchQueue.main.async { if self.active.contains(id) { task.didReceive(response) } }
             try? handle.seek(toOffset: UInt64(start))
             var remaining = length
-            while remaining > 0 {
+            while remaining > 0 && !self.isStopped(id) {
                 let chunk = (try? handle.read(upToCount: min(remaining, 1 << 20))) ?? Data()
                 if chunk.isEmpty { break }
                 remaining -= chunk.count
@@ -58,7 +61,20 @@ final class SiteSchemeHandler: NSObject, WKURLSchemeHandler {
     }
 
     func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {
-        active.remove(ObjectIdentifier(task))
+        let id = ObjectIdentifier(task)
+        active.remove(id)
+        lock.lock(); stopped.insert(id); lock.unlock()
+    }
+
+    private func isStopped(_ id: ObjectIdentifier) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return stopped.contains(id)
+    }
+
+    /// The byte range to send for a Range header (nil: no header or unusable → whole file, 200).
+    static func responseRange(header: String?, size: Int, cap: Int) -> (start: Int, end: Int)? {
+        guard let header, let r = parse(range: header, size: size) else { return nil }
+        return (r.0, min(r.1, r.0 + cap - 1))
     }
 
     private func finish(_ task: WKURLSchemeTask, status: Int) {

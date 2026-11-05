@@ -105,12 +105,17 @@ private struct JSONRowGroup: View {
         switch node {
         case .object(let p): Text(p.isEmpty ? "{ }" : "{ \(p.count) \(p.count == 1 ? "key" : "keys") }").foregroundStyle(.secondary)
         case .array(let a): Text(a.isEmpty ? "[ ]" : "[ \(a.count) \(a.count == 1 ? "item" : "items") ]").foregroundStyle(.secondary)
-        case .string(let s): Text("\"\(s)\"").foregroundStyle(Color(red: 0.77, green: 0.10, blue: 0.09).opacity(0.9))
+        case .string(let s): Text("\"\(s)\"").foregroundStyle(Self.stringColor)
         case .number(let n): Text(n).foregroundStyle(.blue)
         case .bool(let b): Text(b ? "true" : "false").foregroundStyle(.orange)
         case .null: Text("null").foregroundStyle(.secondary).italic()
         }
     }
+
+    /// Dark red on light, soft coral on dark (both above 4.5:1).
+    static let stringColor = Color(UIColor { $0.userInterfaceStyle == .dark
+        ? UIColor(red: 1.0, green: 0.52, blue: 0.47, alpha: 1)
+        : UIColor(red: 0.70, green: 0.10, blue: 0.08, alpha: 1) })
 
     private static func member(_ key: String) -> String {
         let simple = key.range(of: #"^[A-Za-z_$][A-Za-z0-9_$]*$"#, options: .regularExpression) != nil

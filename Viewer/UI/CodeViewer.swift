@@ -63,7 +63,7 @@ struct CodeViewer: View {
     }
 
     static let template = """
-    <!doctype html><html><head><meta charset="utf-8">
+    <!doctype html><html><head><meta charset="utf-8">\(StaticWeb.csp)
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
     </head><body><div class="wrapper"><pre id="gutter" aria-hidden="true"></pre><pre><code id="code" class="hljs"></code></pre></div></body></html>
     """

@@ -14,6 +14,8 @@ struct RecentItem: Codable, Identifiable, Equatable {
 @MainActor
 final class RecentsStore: ObservableObject {
     @Published private(set) var items: [RecentItem] = []
+    /// Items whose files can't be found; refreshed off the main thread, never while drawing.
+    @Published private(set) var missing: Set<UUID> = []
     private let fileURL: URL
     let limit = 50
 
@@ -76,6 +78,24 @@ final class RecentsStore: ObservableObject {
     }
 
     func isMissing(_ item: RecentItem) -> Bool { resolve(item) == nil }
+
+    func refreshMissing() async {
+        let snapshot = items.map { ($0.id, $0.bookmark) }
+        let gone = await Task.detached(priority: .utility) { () -> Set<UUID> in
+            var result = Set<UUID>()
+            for (id, bookmark) in snapshot {
+                var stale = false
+                guard let url = try? URL(resolvingBookmarkData: bookmark, options: [.withoutUI], relativeTo: nil, bookmarkDataIsStale: &stale) else {
+                    result.insert(id); continue
+                }
+                let scoped = url.startAccessingSecurityScopedResource()
+                if !FileManager.default.fileExists(atPath: url.path) { result.insert(id) }
+                if scoped { url.stopAccessingSecurityScopedResource() }
+            }
+            return result
+        }.value
+        if gone != missing { missing = gone }
+    }
 
     private func normalize() {
         items.sort { a, b in a.pinned != b.pinned ? a.pinned : a.opened > b.opened }

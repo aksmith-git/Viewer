@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import UniformTypeIdentifiers
 
@@ -5,19 +6,24 @@ import UniformTypeIdentifiers
 /// so ES modules, fetch() and XHR of local files work as they do on a real web server.
 enum SiteURL {
     static let scheme = "viewer"
-    static let host = "local"
+
+    /// Each opened folder gets its own host, so sites can't read each other's storage.
+    static func host(for root: URL) -> String {
+        let digest = SHA256.hash(data: Data(NavigationPolicy.canonical(root).utf8))
+        return "s" + digest.prefix(6).map { String(format: "%02x", $0) }.joined()
+    }
 
     static func url(for file: URL, root: URL) -> URL {
         let base = root.standardizedFileURL.path
         var rel = String(file.standardizedFileURL.path.dropFirst(base.count))
         if rel.hasPrefix("/") { rel.removeFirst() }
         let encoded = rel.addingPercentEncoding(withAllowedCharacters: pathAllowed) ?? rel
-        return URL(string: "\(scheme)://\(host)/\(encoded)")!
+        return URL(string: "\(scheme)://\(host(for: root))/\(encoded)")!
     }
 
     /// The file a site URL points to, or nil if it's not a site URL or would leave the root.
     static func file(for url: URL, root: URL) -> URL? {
-        guard url.scheme?.lowercased() == scheme, url.host?.lowercased() == host else { return nil }
+        guard url.scheme?.lowercased() == scheme, url.host?.lowercased() == host(for: root) else { return nil }
         var path = url.path                      // percent-decoded, no query/fragment
         if path.hasPrefix("/") { path.removeFirst() }
         var file = root.appendingPathComponent(path).standardizedFileURL
