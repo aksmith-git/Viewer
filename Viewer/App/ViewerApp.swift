@@ -22,6 +22,15 @@ struct ViewerApp: App {
                     if let path = UserDefaults.standard.string(forKey: "open"), opener.opened == nil {
                         opener.open(URL(fileURLWithPath: path))
                     }
+                    #if DEBUG
+                    // Remote testing: a Documents/.open file naming a file in Documents opens it at launch.
+                    let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                    let request = docs.appendingPathComponent(".open")
+                    if let name = try? String(contentsOf: request).trimmingCharacters(in: .whitespacesAndNewlines) {
+                        try? FileManager.default.removeItem(at: request)
+                        opener.open(docs.appendingPathComponent(name))
+                    }
+                    #endif
                 }
         }
     }

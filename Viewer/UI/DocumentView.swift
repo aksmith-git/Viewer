@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Shows one file or folder, choosing the viewer from its `FileKind`.
 struct DocumentView: View {
@@ -38,8 +39,19 @@ struct DocumentView: View {
             }
         case .csv(let separator):
             CSVGridView(url: url, separator: separator).id(url)
-        default:
-            PlaceholderView(url: url)
+        case .quickLook:
+            let type = UTType(filenameExtension: url.pathExtension.lowercased())
+            if type?.conforms(to: .pdf) == true {
+                PDFDocumentView(url: url).id(url)
+            } else if type?.conforms(to: .image) == true && type?.conforms(to: .gif) != true {
+                ImageViewer(url: url).id(url)
+            } else if type?.conforms(to: .audiovisualContent) == true || type?.conforms(to: .audio) == true {
+                MediaPlayerView(url: url).id(url)
+            } else {
+                QuickLookView(url: url).ignoresSafeArea(edges: .bottom).id(url)
+            }
+        case .unknown:
+            InfoView(url: url)
         }
     }
 }
@@ -73,18 +85,6 @@ struct ZipView: View {
             } catch {
                 failure = "The zip is damaged or in a format Viewer can't read."
             }
-        }
-    }
-}
-
-struct PlaceholderView: View {
-    let url: URL
-    var body: some View {
-        let style = KindStyle(url: url)
-        VStack(spacing: 12) {
-            KindBadge(style: style, size: 64)
-            Text(url.lastPathComponent).font(.headline)
-            Text(style.label).foregroundStyle(.secondary)
         }
     }
 }

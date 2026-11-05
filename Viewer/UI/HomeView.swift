@@ -45,6 +45,7 @@ struct HomeView: View {
             Text("It may have been moved, renamed or deleted.")
         }
         .sheet(isPresented: $showingAbout) { AboutView() }
+        .task { if UserDefaults.standard.bool(forKey: "showAbout") { showingAbout = true } }   // screenshots
     }
 
     private var list: some View {
