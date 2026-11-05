@@ -43,6 +43,7 @@ struct WebViewer: View {
                 NavigationStack { SourceView(url: model.file) }
             }
             .sheet(item: $pdf) { ShareSheet(items: [$0]).ignoresSafeArea() }
+            #if DEBUG
             .task {
                 // `-showConsole YES` launch argument, for screenshots
                 if UserDefaults.standard.bool(forKey: "showConsole") {
@@ -50,6 +51,7 @@ struct WebViewer: View {
                     showConsole = true
                 }
             }
+            #endif
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
@@ -57,8 +59,10 @@ struct WebViewer: View {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button { model.webView.goBack() } label: { Label("Back", systemImage: "chevron.backward") }
                     .disabled(!model.canGoBack)
+                    .keyboardShortcut("[", modifiers: .command)
                 Button { model.webView.goForward() } label: { Label("Forward", systemImage: "chevron.forward") }
                     .disabled(!model.canGoForward)
+                    .keyboardShortcut("]", modifiers: .command)
             }
         }
         ToolbarItem(placement: .topBarTrailing) {
@@ -74,16 +78,20 @@ struct WebViewer: View {
             Menu {
                 Section {
                     Button { model.find() } label: { Label("Find on Page", systemImage: "magnifyingglass") }
+                        .keyboardShortcut("f", modifiers: .command)
                     Button { showSource = true } label: { Label("View Source", systemImage: "chevron.left.forwardslash.chevron.right") }
+                        .keyboardShortcut("u", modifiers: [.command, .option])
                     Button { showConsole = true } label: {
                         Label(model.errorCount > 0 ? "Console (\(model.errorCount) errors)" : "Console", systemImage: "terminal")
                     }
+                    .keyboardShortcut("c", modifiers: [.command, .option])
                 }
                 Section {
                     Button { model.toggleDesktop() } label: {
                         model.desktop ? Label("Request Mobile Site", systemImage: "iphone") : Label("Request Desktop Site", systemImage: "desktopcomputer")
                     }
                     Button { model.reload() } label: { Label("Reload", systemImage: "arrow.clockwise") }
+                        .keyboardShortcut("r", modifiers: .command)
                 }
                 Section {
                     Button {
@@ -91,6 +99,7 @@ struct WebViewer: View {
                         Task { pdf = await model.makePDF(); makingPDF = false }
                     } label: { Label("Save as PDF", systemImage: "doc.richtext") }
                     Button { model.print() } label: { Label("Print", systemImage: "printer") }
+                        .keyboardShortcut("p", modifiers: .command)
                 }
             } label: {
                 if makingPDF { ProgressView() } else { Label("More", systemImage: "ellipsis") }

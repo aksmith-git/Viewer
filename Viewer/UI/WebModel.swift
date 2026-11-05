@@ -216,7 +216,7 @@ extension WebModel: WKUIDelegate {
     private func present(_ alert: UIAlertController) -> Bool {
         var top = webView.window?.rootViewController
         while let next = top?.presentedViewController { top = next }
-        guard let top else { return false }
+        guard let top, !top.isBeingDismissed, top.viewIfLoaded?.window != nil else { return false }
         top.present(alert, animated: true)
         return true
     }

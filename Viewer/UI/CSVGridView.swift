@@ -24,7 +24,7 @@ struct CSVGridView: View {
             } else if let table {
                 grid(table)
                     .safeAreaInset(edge: .top, spacing: 0) {
-                        if table.truncated { NoticeBar(text: "Showing the first 50,000 rows") }
+                        if table.truncated { NoticeBar(text: "Showing the first \(table.rows.count.formatted()) rows") }
                     }
             } else if failed {
                 ContentUnavailableView("Can't Read Table", systemImage: "tablecells", description: Text("Viewer couldn't read this file as text."))
@@ -50,14 +50,24 @@ struct CSVGridView: View {
         .task(id: url) { await load() }
     }
 
+    static let byteLimit = 32 * 1024 * 1024
+
     private func load() async {
         let url = url, sep = separator
-        let result = await Task.detached { () -> Table? in
-            guard let text = try? TextLoader.load(url, limit: 200 * 1024 * 1024).text else { return nil }
-            let parsed = CSVParser.parse(text, separator: sep, maxRows: Self.maxRows)
-            return Table(rows: parsed.rows, truncated: parsed.truncated, widths: Self.widths(parsed.rows), numeric: Self.numeric(parsed.rows))
-        }.value
+        let result = await Task.detached { Self.loadTable(url, separator: sep, byteLimit: Self.byteLimit, maxRows: Self.maxRows) }.value
         if let result { table = result } else { failed = true }
+    }
+
+    /// Reads at most `byteLimit` bytes (dropping a partial last line) and up to `maxRows` rows.
+    nonisolated static func loadTable(_ url: URL, separator: Character, byteLimit: Int, maxRows: Int) -> Table? {
+        guard let loaded = try? TextLoader.load(url, limit: byteLimit) else { return nil }
+        var text = loaded.text
+        if loaded.truncated, let lastBreak = text.lastIndex(where: { $0 == "\n" || $0 == "\r\n" || $0 == "\r" }) {
+            text = String(text[..<lastBreak])
+        }
+        let parsed = CSVParser.parse(text, separator: separator, maxRows: maxRows)
+        return Table(rows: parsed.rows, truncated: parsed.truncated || loaded.truncated,
+                     widths: widths(parsed.rows), numeric: numeric(parsed.rows))
     }
 
     private func grid(_ t: Table) -> some View {

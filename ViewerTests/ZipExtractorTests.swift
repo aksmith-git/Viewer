@@ -42,6 +42,25 @@ final class ZipExtractorTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("css/x.css").path))
     }
 
+    func testConcurrentExtractionBothSucceed() throws {
+        let zip = try fixture("nested.zip")
+        let caches = self.caches!
+        var results = [URL?](repeating: nil, count: 4)
+        let lock = NSLock()
+        DispatchQueue.concurrentPerform(iterations: 4) { i in
+            let r = try? ZipExtractor.extract(zip, cachesRoot: caches)
+            lock.lock(); results[i] = r; lock.unlock()
+        }
+        XCTAssertEqual(Set(results.compactMap { $0 }).count, 1)
+        XCTAssertTrue(results.allSatisfy { $0 != nil })
+    }
+
+    func testRejectsOversizedArchive() throws {
+        XCTAssertThrowsError(try ZipExtractor.extract(try fixture("nested.zip"), cachesRoot: caches, maxTotalSize: 10)) { error in
+            XCTAssertEqual(error as? ZipError, .tooLarge)
+        }
+    }
+
     func testRejectsDotDotPath() throws {
         let zip = try fixture("evil.zip")
         XCTAssertThrowsError(try ZipExtractor.extract(zip, cachesRoot: caches)) { error in

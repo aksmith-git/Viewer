@@ -80,6 +80,8 @@ struct ZipView: View {
                 let r = try await Task.detached { try ZipExtractor.extract(zip, cachesRoot: caches) }.value
                 opener.noteSiteRoot(r)
                 root = r
+            } catch ZipError.tooLarge {
+                failure = "This zip would unpack to more than 2 GB, so Viewer won't open it."
             } catch ZipError.unsafePath {
                 failure = "This zip tries to put files outside its own folder, so Viewer won't unpack it."
             } catch {

@@ -46,7 +46,9 @@ struct HomeView: View {
             Text("It may have been moved, renamed or deleted.")
         }
         .sheet(isPresented: $showingAbout) { AboutView() }
+        #if DEBUG
         .task { if UserDefaults.standard.bool(forKey: "showAbout") { showingAbout = true } }   // screenshots
+        #endif
         .task(id: recents.items.map(\.id)) { await recents.refreshMissing() }
         .onChange(of: scenePhase) { if scenePhase == .active { Task { await recents.refreshMissing() } } }
     }

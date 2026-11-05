@@ -18,6 +18,8 @@ final class RecentsStore: ObservableObject {
     @Published private(set) var missing: Set<UUID> = []
     private let fileURL: URL
     let limit = 50
+    /// Called for items dropped by the size limit (not for explicit removes).
+    var onEvict: ((RecentItem) -> Void)?
 
     init(fileURL: URL) {
         self.fileURL = fileURL
@@ -100,7 +102,8 @@ final class RecentsStore: ObservableObject {
     private func normalize() {
         items.sort { a, b in a.pinned != b.pinned ? a.pinned : a.opened > b.opened }
         while items.count > limit, let last = items.lastIndex(where: { !$0.pinned }) {
-            items.remove(at: last)
+            let evicted = items.remove(at: last)    // not inside onEvict?(…): that would skip the removal when nil
+            onEvict?(evicted)
         }
         save()
     }

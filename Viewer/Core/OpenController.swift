@@ -6,12 +6,17 @@ import Foundation
 final class OpenController: ObservableObject {
     @Published var opened: URL?
     @Published var children: [URL] = []
-    /// The folder pages are allowed to load files from: the opened folder or the unpacked zip.
-    private(set) var siteRoot: URL?
+    /// Folders pages may load files from: the opened folder and any zips unpacked while browsing it.
+    private(set) var siteRoots: [URL] = []
     private var scoped: URL?
     private let recents: RecentsStore
+    let importedRoot: URL
 
-    init(recents: RecentsStore) { self.recents = recents }
+    init(recents: RecentsStore, importedRoot: URL = OpenController.defaultImportedRoot) {
+        self.recents = recents
+        self.importedRoot = importedRoot
+        recents.onEvict = { [weak self] item in self?.deleteImportedCopy(of: item) }
+    }
 
     /// Open a file or folder from the picker, the share sheet, or recents.
     func open(_ url: URL) {
@@ -20,20 +25,20 @@ final class OpenController: ObservableObject {
         if target.startAccessingSecurityScopedResource() { scoped = target }
         recents.add(target)
         children = []
-        siteRoot = nil
+        siteRoots = []
         opened = target
     }
 
     func noteSiteRoot(_ url: URL) {
-        if siteRoot == nil || !url.standardizedFileURL.path.hasPrefix(siteRoot!.standardizedFileURL.path + "/") {
-            siteRoot = url
-        }
+        if !siteRoots.contains(where: { $0.standardizedFileURL == url.standardizedFileURL }) { siteRoots.append(url) }
     }
 
-    /// Where an HTML file may read from: the site root when the file is inside it, else its own folder.
+    /// Where an HTML file may read from: the widest known root containing it (so ../ works from
+    /// subfolders), else the file's own folder.
     func readRoot(for file: URL) -> URL {
-        if let root = siteRoot, file.standardizedFileURL.path.hasPrefix(root.standardizedFileURL.path + "/") { return root }
-        return file.deletingLastPathComponent()
+        siteRoots.filter { NavigationPolicy.isInside(file, $0) }
+            .min { NavigationPolicy.canonical($0).count < NavigationPolicy.canonical($1).count }
+            ?? file.deletingLastPathComponent()
     }
 
     func close() {
@@ -41,7 +46,7 @@ final class OpenController: ObservableObject {
         scoped = nil
         opened = nil
         children = []
-        siteRoot = nil
+        siteRoots = []
     }
 
     /// Files copied to us by "Open in…" land in Documents/Inbox, which iOS may clear. Move them to
@@ -50,7 +55,7 @@ final class OpenController: ObservableObject {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let inbox = docs.appendingPathComponent("Inbox").standardizedFileURL.path
         guard url.standardizedFileURL.path.hasPrefix(inbox + "/") else { return url }
-        let dest = Self.importedRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let dest = importedRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
         do {
             try FileManager.default.createDirectory(at: dest, withIntermediateDirectories: true)
             let moved = dest.appendingPathComponent(url.lastPathComponent)
@@ -61,7 +66,7 @@ final class OpenController: ObservableObject {
         }
     }
 
-    static var importedRoot: URL {
+    nonisolated static var defaultImportedRoot: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Imported", isDirectory: true)
     }
@@ -69,9 +74,14 @@ final class OpenController: ObservableObject {
     /// Removes a recent and, if Viewer holds its only copy, the imported file too.
     func forget(_ item: RecentItem) {
         recents.remove(item.id)
-        let root = Self.importedRoot.standardizedFileURL.path
-        if item.path.hasPrefix(root + "/") {
-            try? FileManager.default.removeItem(at: URL(fileURLWithPath: item.path).deletingLastPathComponent())
-        }
+        deleteImportedCopy(of: item)
+    }
+
+    /// Imported copies live in Imported/<uuid>/; delete the folder unless that file is open now.
+    private func deleteImportedCopy(of item: RecentItem) {
+        let file = URL(fileURLWithPath: item.path)
+        guard NavigationPolicy.isInside(file, importedRoot) else { return }
+        if let opened, NavigationPolicy.canonical(opened) == NavigationPolicy.canonical(file) { return }
+        try? FileManager.default.removeItem(at: file.deletingLastPathComponent())
     }
 }

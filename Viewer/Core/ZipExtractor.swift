@@ -5,11 +5,15 @@ import ZIPFoundation
 enum ZipError: Error, Equatable {
     case unsafePath(String)
     case unreadable
+    case tooLarge
 }
 
 /// Unpacks a zip into Caches/Extracted/<hash>/ so its pages can load their CSS, JS and images.
 enum ZipExtractor {
-    static func extract(_ zip: URL, cachesRoot: URL) throws -> URL {
+    /// Archives that would unpack to more than this are refused (zip bombs).
+    static let defaultMaxTotalSize: UInt64 = 2 << 30
+
+    static func extract(_ zip: URL, cachesRoot: URL, maxTotalSize: UInt64 = defaultMaxTotalSize) throws -> URL {
         let extracted = cachesRoot.appendingPathComponent("Extracted", isDirectory: true)
         let final = extracted.appendingPathComponent(try key(for: zip), isDirectory: true)
         let fm = FileManager.default
@@ -17,8 +21,12 @@ enum ZipExtractor {
             let staging = extracted.appendingPathComponent(".staging-\(UUID().uuidString)", isDirectory: true)
             try fm.createDirectory(at: staging, withIntermediateDirectories: true)
             do {
-                try unpack(zip, into: staging)
-                try fm.moveItem(at: staging, to: final)
+                try unpack(zip, into: staging, maxTotalSize: maxTotalSize)
+                do {
+                    try fm.moveItem(at: staging, to: final)
+                } catch where fm.fileExists(atPath: final.path) {
+                    try? fm.removeItem(at: staging)        // another extraction of the same zip finished first
+                }
             } catch {
                 try? fm.removeItem(at: staging)
                 throw error
@@ -34,9 +42,11 @@ enum ZipExtractor {
         return SHA256.hash(data: Data(id.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func unpack(_ zip: URL, into root: URL) throws {
+    private static func unpack(_ zip: URL, into root: URL, maxTotalSize: UInt64) throws {
         let archive: Archive
         do { archive = try Archive(url: zip, accessMode: .read) } catch { throw ZipError.unreadable }
+        let total = archive.reduce(UInt64(0)) { $0 + UInt64($1.uncompressedSize) }
+        guard total <= maxTotalSize else { throw ZipError.tooLarge }
         let rootPath = root.standardizedFileURL.path
         for entry in archive {
             let path = entry.path

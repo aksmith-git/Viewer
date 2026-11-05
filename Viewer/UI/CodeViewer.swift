@@ -100,13 +100,16 @@ struct TextOptionsMenu: View {
         Menu {
             Section {
                 Button(action: find) { Label("Find", systemImage: "magnifyingglass") }
+                    .keyboardShortcut("f", modifiers: .command)
                 Button(action: copy) { Label("Copy All", systemImage: "doc.on.doc") }
             }
             Section {
                 if showWrap { Toggle(isOn: $wrap) { Label("Wrap Lines", systemImage: "text.word.spacing") } }
                 ControlGroup {
                     Button { size = max(9, size - 1) } label: { Label("Smaller", systemImage: "textformat.size.smaller") }
+                        .keyboardShortcut("-", modifiers: .command)
                     Button { size = min(28, size + 1) } label: { Label("Larger", systemImage: "textformat.size.larger") }
+                        .keyboardShortcut("+", modifiers: .command)
                 } label: { Text("Text Size") }
             }
         } label: {
