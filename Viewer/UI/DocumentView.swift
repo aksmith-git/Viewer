@@ -20,6 +20,12 @@ struct DocumentView: View {
             ZipView(zip: url)
         case .html:
             WebViewer(file: url, root: opener.readRoot(for: url)).id(url)
+        case .markdown:
+            MarkdownViewer(url: url, root: opener.readRoot(for: url)).id(url)
+        case .code(let language):
+            CodeViewer(url: url, language: language).id(url)
+        case .text:
+            CodeViewer(url: url, language: nil).id(url)
         default:
             PlaceholderView(url: url)
         }

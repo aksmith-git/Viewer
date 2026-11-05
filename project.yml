@@ -11,7 +11,12 @@ targets:
   Viewer:
     type: application
     platform: iOS
-    sources: [Viewer]
+    sources:
+      - path: Viewer
+        excludes: [Resources/hljs]
+      - path: Viewer/Resources/hljs
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: ZIPFoundation
     info:

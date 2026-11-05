@@ -1,0 +1,7 @@
+Viewer notes
+============
+
+Plain text opens in a clean monospaced view with line numbers.
+Long lines can be wrapped from the menu, and the text size adjusts too.
+
+Everything works offline. Nothing leaves your device.

@@ -136,19 +136,14 @@ extension URL: @retroactive Identifiable {
     public var id: String { absoluteString }
 }
 
-/// Source of a page (Task 5 swaps in syntax colouring).
+/// Source of a page, coloured.
 struct SourceView: View {
     let url: URL
     @Environment(\.dismiss) private var dismiss
     var body: some View {
-        ScrollView([.vertical, .horizontal]) {
-            Text((try? String(contentsOf: url)) ?? "")
-                .font(.system(.footnote, design: .monospaced))
-                .textSelection(.enabled)
-                .padding()
-        }
-        .navigationTitle(url.lastPathComponent)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        CodeViewer(url: url, language: "xml")
+            .navigationTitle(url.lastPathComponent)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
     }
 }
