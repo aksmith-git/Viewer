@@ -1,0 +1,10 @@
+[
+  {"name": "Mercury", "distance": 0.39, "moons": 0, "color": "#b5a7a0"},
+  {"name": "Venus", "distance": 0.72, "moons": 0, "color": "#e8c37b"},
+  {"name": "Earth", "distance": 1.0, "moons": 1, "color": "#4f9dff"},
+  {"name": "Mars", "distance": 1.52, "moons": 2, "color": "#e0623a"},
+  {"name": "Jupiter", "distance": 5.2, "moons": 95, "color": "#d9a066"},
+  {"name": "Saturn", "distance": 9.58, "moons": 146, "color": "#ead391"},
+  {"name": "Uranus", "distance": 19.2, "moons": 28, "color": "#8fd8e8"},
+  {"name": "Neptune", "distance": 30.05, "moons": 16, "color": "#4a6cf0"}
+]

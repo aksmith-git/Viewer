@@ -18,6 +18,8 @@ struct DocumentView: View {
                 .onAppear { opener.noteSiteRoot(url) }
         case .zip:
             ZipView(zip: url)
+        case .html:
+            WebViewer(file: url, root: opener.readRoot(for: url)).id(url)
         default:
             PlaceholderView(url: url)
         }
